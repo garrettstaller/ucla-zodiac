@@ -5,12 +5,13 @@
 # If the boat did not go out that date message will be prompted.
 # User may make two logical choices: exclude marina data and exclude nans 
 
-def select_track(date, dictionary, excludenans, excludemdr)
+def select_track(date, dictionary, excludenans, excludemdr):
     import numpy as np
     
     # Try/except statment allows for error message regarding 
     # no zodiac data on specified date
     try: 
+        specific_track = dictionary[date]
         lat = specific_track['location'][1]
         lon = specific_track['location'][0]
         SST = specific_track['SST']
@@ -88,7 +89,7 @@ def gradient(x, y, lat, lon):
 
 # Distance functions
 # find the distace between to geographical points
-def calc_distance(x_1, x_2, y_1, y_2):
+def distance_formula(x_1, x_2, y_1, y_2):
     import numpy as np
     diff_x = (x_2 - x_1)
     x_distance = diff_x*111.11 # 1 deg. lat = 111.11 km
@@ -97,7 +98,7 @@ def calc_distance(x_1, x_2, y_1, y_2):
     result = np.sqrt((x_distance)**2 + (y_distance)**2)
     return result
 # Utilize above function to create an array of distances from cruise coords
-def distance(lat, lon):
+def calc_distance(lat, lon):
     import numpy as np
     distance = [0]
     for i in range(len(lat) - 1):
@@ -105,7 +106,7 @@ def distance(lat, lon):
         x_2 = lat[i + 1]
         y_1 = lon[i]
         y_2 = lon[i + 1]
-        r = calc_distance(x_1, x_2, y_1, y_2)
+        r = distance_formula(x_1, x_2, y_1, y_2)
         cumulative = distance[i] + r
         distance = np.append(distance, cumulative)
     return distance
@@ -135,5 +136,69 @@ def bearing(lat, lon):
         bearings = np.append(bearings, bearing)
     return bearings
 
+# Subset Function
+# Takes in data and compares it to an existing array to check for duplicates
+
 # --------- Data Processing --------- #
 
+def data_processing(lat, lon, c, window): # change c and windowsize accordingly - recommended window size for sst = 10 
+    import numpy as np
+    distance = calc_distance(lat, lon) # Calls upon distance function from ZF.py file
+    failed_series = []
+    # First segment our distance array so that we have a point every 10 meters from the start to the end
+    dist_spaced = np.arange(min(distance), max(distance), .01)
+    # The windowsize will determine the number of points we span in our running average, mutliply this by the 10 meters 
+    # to understand our window in terms of distance, and not just the number of points.
+    window_size = window
+    # Start will be used for indexing in our loop, its initial value is 0, and is thus set to that prior to loop
+    start = 0
+    # The following are arrays that will hold our evenly spaced and smoothed data, as well as some of its stats. 
+    c_processed, dist_processed = [], []
+    # Loop will run from start of our data set to just a window size below it, otherwise we will get a run time error in indexing
+    for i in range(len(dist_spaced) - window_size):
+        try:
+            # set up latter bound of index
+            end = start + window_size
+            # Index from start, 0 at i = 1 or x based on ith, to the end, start plus our window
+            distance_bounds = dist_spaced[start:end+1] # we add 1 as indexing is naturally non-inclusive
+            start = i+1 # Just add one to our index so that we shift the moving average by 1 pt. or 10 meters each time 
+            # With C DATA of the desired window selected, take all within these bounds 
+            C_bounds = (c[(distance > distance_bounds[0]) & (distance < distance_bounds[-1])])
+            # With ONLY the C DATA within selected bounds, take average and add it as processed data 
+            c_processed = np.append(c_processed, sum(C_bounds)/len(C_bounds))
+            # We will take the median, or center, of this data to be the corresponding distance point 
+            dist_processed = np.append(dist_processed, np.median(distance_bounds))
+        except:
+            failed_series = np.append(failed_series, distance_bounds)
+        continue
+    return dist_processed, c_processed
+
+def running_avg_filter(window_size, lat, lon, c_processed, dist_processed):
+    import numpy as np
+    distance = calc_distance(lat, lon)
+    failed_series = []
+    # The windowsize will determine the number of points we span in our running average, mutliply this by the 10 meters 
+    # to understand our window in terms of distance, and not just the number of points.
+    # Start will be used for indexing in our loop, its initial value is 0, and is thus set to that prior to loop
+    start = 0
+    # The following are arrays that will hold our evenly spaced and smoothed data, as well as some of its stats. 
+    c_filtered, dist_filtered = [], []
+    # Loop will run from start of our data set to just a window size below it, otherwise we will get a run time error in indexing
+    for i in range(len(dist_processed) - window_size):
+        try:
+            # set up latter bound of index
+            end = start + window_size
+            # Index from start, 0 at i = 1 or x based on ith, to the end, start plus our window
+            distance_bounds = dist_processed[start:end+1] # we add 1 as indexing is naturally non-inclusive
+            start = i+1 # Just add one to our index so that we shift the moving average by 1 pt. or 10 meters each time 
+            # With C DATA  of the desired window selected, take all within these bounds 
+            C_bounds = c_processed[start:end+1]
+            c_filtered = np.append(c_filtered, sum(C_bounds)/len(C_bounds))
+            dist_filtered = np.append(dist_filtered, np.median(distance_bounds))
+        except:
+            failed_series = np.append(failed_series, distance_bounds)
+        continue
+    interpolated_lat, interpolated_lon = np.interp(dist_filtered, distance, lat), np.interp(dist_filtered, distance, lon)
+    ### Now we calculate the Gradients ###
+    grad_dist, grad_mag, grad_lat, grad_lon = gradient(dist_filtered, c_filtered, interpolated_lat, interpolated_lon)
+    return grad_dist, grad_mag, interpolated_lat, interpolated_lon, c_filtered, dist_filtered
