@@ -40,6 +40,10 @@ file, please refer to **scripts**.
 - pickle
 - cartopy
 
+**Zodiac Functions** <br>
+Individual rotuines that are frequently called from `functions.py` file. Routines include
+data processing, loading and general graphing functionality. 
+
 *Scripts* <br>
 - 
 **Uploading Data - Only for users looking for cruise data after 01/2024** <br>
@@ -53,3 +57,7 @@ file, please refer to **scripts**.
 - `ensembles`: Creates a dictionary of all detected fronts and filaments
   - Dictionary MUST be saved for following script
 - `probability_distribution`: Generates pdf of detected submesoscale features
+
+**Satellite Viewer** <br>
+- `satellite_viewer`: A tool to view satellite data provided by a website of compiled satellite imagery for SST and chlorophyll
+  - See README and data for site: https://spg-satdata.ucsd.edu/
