@@ -27,9 +27,11 @@ file, please refer to **scripts**.
   - Cruise Data **(LATEST: 05/2015 - 01/2024)**
   	- Stored in .pkl files: `track_data.pkl`
   - Geographical Data (OPTIONAL)
+    **For plotting bathymetry and land features**
   	- U.S. Coastal Relief Model - Southern California Version 2
   	- https://www.geoplatform.gov/metadata/1f9d35ae-ef0b-43c8-8657-e0de4c55a7e8
   - Satellite Data (OPTIONAL)
+    **If using satellite viewer script, please download http://wimsoft.com/CAL/files/**
   	- Temporarily accessed via scripts, no local save functionality
   	- https://spg-satdata.ucsd.edu/
    	 
